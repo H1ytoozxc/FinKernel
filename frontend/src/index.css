@@ -26,10 +26,17 @@
 }
 
 :root {
-  --bg: #f6f7f8;
-  --card: #ffffff;
-  --border: rgba(0, 0, 0, 0.08);
-  --text: #1a1a1a;
+  /* Theme variables (light) */
+  --bg-primary: #f6f7f8;
+  --text-primary: #1a1a1a;
+  --card-bg: #ffffff;
+  --border-color: rgba(0, 0, 0, 0.08);
+
+  /* Back-compat aliases used throughout the app */
+  --bg: var(--bg-primary);
+  --card: var(--card-bg);
+  --border: var(--border-color);
+  --text: var(--text-primary);
   --text-dim: rgba(0, 0, 0, 0.55);
   --text-muted: rgba(0, 0, 0, 0.35);
   --accent: #ffdd2d;
@@ -54,15 +61,16 @@
 
 body {
   margin: 0;
-  background: var(--bg);
-  color: var(--text);
+  background: var(--bg-primary);
+  color: var(--text-primary);
   overflow-x: hidden;
+  transition: background-color 0.3s ease, color 0.3s ease;
 }
 
 html, body, #root {
   width: 100%;
   min-height: 100vh;
-  background: var(--bg);
+  background: var(--bg-primary);
 }
 
 #root {
@@ -74,12 +82,45 @@ html, body, #root {
   min-height: 100vh;
   display: flex;
   flex-direction: column;
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+main {
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+/* Dark mode: premium dark-fintech tones (no pure black) */
+body.dark {
+  --bg-primary: #0f1217;
+  --text-primary: rgba(255, 255, 255, 0.92);
+  --card-bg: #151a21;
+  --border-color: rgba(255, 255, 255, 0.10);
+
+  --text-dim: rgba(255, 255, 255, 0.62);
+  --text-muted: rgba(255, 255, 255, 0.42);
+  --accent-bg: rgba(255, 221, 45, 0.16);
+
+  color-scheme: dark;
+}
+
+/* Dark-mode bridge for inline light styles used in screens */
+body.dark [style*="background: #ffffff"],
+body.dark [style*="background:#ffffff"] {
+  background: var(--card-bg) !important;
+}
+body.dark [style*="color: #1a1a1a"],
+body.dark [style*="color:#1a1a1a"] {
+  color: var(--text-primary) !important;
+}
+body.dark [style*="border: 1px solid rgba(0,0,0,0.08)"],
+body.dark [style*="border:1px solid rgba(0,0,0,0.08)"] {
+  border-color: var(--border-color) !important;
 }
 
 h1, h2, h3 {
   font-family: var(--sans);
   font-weight: 700;
-  color: #1a1a1a;
+  color: var(--text-primary);
   margin: 0;
 }
 
@@ -262,7 +303,8 @@ input[type="range"]::-moz-range-thumb {
 
 @media (max-width: 768px) {
   :root {
-    font-size: 15px;
+    font-size: 14px;
+    --mobile-pad: 16px;
   }
 
   html {
@@ -271,6 +313,7 @@ input[type="range"]::-moz-range-thumb {
 
   body {
     overscroll-behavior-x: none;
+    overflow-x: hidden;
   }
 
   h1 {
@@ -310,8 +353,23 @@ input[type="range"]::-moz-range-thumb {
   main {
     width: 100%;
     max-width: 100%;
-    padding-inline: 14px !important;
+    padding-inline: var(--mobile-pad) !important;
+    padding-top: 14px !important;
     padding-bottom: 28px !important;
+  }
+
+  /* Prevent accidental overflow from inline-sized elements */
+  main * {
+    max-width: 100%;
+  }
+
+  /* Normalize page wrapper spacing */
+  main > div {
+    width: 100%;
+    max-width: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
   }
 
   [style*="max-width: 1060px"],
@@ -379,12 +437,26 @@ input[type="range"]::-moz-range-thumb {
   }
 
   [style*="width: 400px"][style*="max-width: 90vw"] {
-    width: calc(100vw - 24px) !important;
-    max-width: calc(100vw - 24px) !important;
-    max-height: calc(100vh - 24px) !important;
-    padding: 20px 16px !important;
-    border-radius: 16px !important;
+    width: calc(100vw - (var(--mobile-pad) * 2)) !important;
+    max-width: calc(100vw - (var(--mobile-pad) * 2)) !important;
+    max-height: calc(100vh - (var(--mobile-pad) * 2)) !important;
+    padding: 22px 16px !important;
+    border-radius: 18px !important;
     overflow-y: auto !important;
+  }
+
+  /* Full-width modal overlay alignment + safe-area padding */
+  [style*="position: fixed"][style*="inset: 0"][style*="justify-content: center"] {
+    padding: var(--mobile-pad) !important;
+    align-items: flex-end !important;
+  }
+
+  /* Inputs in modal: larger, cleaner */
+  [style*="width: 400px"][style*="max-width: 90vw"] input,
+  [style*="width: 400px"][style*="max-width: 90vw"] select,
+  [style*="width: 400px"][style*="max-width: 90vw"] textarea {
+    border-radius: 12px !important;
+    padding: 12px 12px !important;
   }
 
   [style*="max-width: 90vw"] button,
@@ -396,6 +468,37 @@ input[type="range"]::-moz-range-thumb {
 
   [style*="position: sticky"][style*="width: 100%"][style*="z-index: 200"] {
     backdrop-filter: blur(14px);
+    background: rgba(255, 255, 255, 0.92) !important;
+  }
+
+  /* Mobile header/nav: more premium spacing */
+  [style*="position: sticky"][style*="width: 100%"][style*="z-index: 200"] nav {
+    gap: 10px !important;
+    padding-bottom: 6px !important;
+  }
+
+  [style*="position: sticky"][style*="width: 100%"][style*="z-index: 200"] button {
+    border-radius: 12px !important;
+  }
+
+  /* Card-based feel: ensure cards don't touch edges and keep consistent radius */
+  [style*="border: 1px solid rgba(0,0,0,0.08)"][style*="box-shadow: 0 1px 3px rgba(0,0,0,0.06)"] {
+    border-radius: 12px !important;
+  }
+
+  /* Visual hierarchy: emphasize amounts, dim secondary lines */
+  [style*="font-weight: 800"],
+  [style*="font-weight: 700"] {
+    letter-spacing: -0.01em;
+  }
+
+  [style*="rgba(0,0,0,0.3)"],
+  [style*="rgba(0,0,0,0.35)"],
+  [style*="rgba(0,0,0,0.4)"],
+  [style*="rgba(0,0,0,0.45)"],
+  [style*="rgba(0,0,0,0.5)"],
+  [style*="rgba(0,0,0,0.55)"] {
+    -webkit-font-smoothing: antialiased;
   }
 
   [style*="overflow-x: auto"] {
@@ -503,6 +606,6 @@ html.no-animations *::after {
 /* Responsive */
 @media (max-width: 768px) {
   :root {
-    font-size: 13px;
+    font-size: 14px;
   }
 }

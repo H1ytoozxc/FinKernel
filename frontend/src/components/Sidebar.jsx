@@ -7,10 +7,18 @@ export default function Sidebar({ active, onNavigate, userName, onLogout, refres
   const [data, setData] = useState(null)
   const [localRefresh, setLocalRefresh] = useState(0)
   const [settings, setSettings] = useState(getSettings)
+  const [theme, setTheme] = useState(() => {
+    try { return localStorage.getItem("finfuture_theme") || "light" } catch { return "light" }
+  })
 
   useEffect(() => {
     getDashboard().then(setData).catch(() => {})
   }, [refreshKey, localRefresh])
+
+  useEffect(() => {
+    try { localStorage.setItem("finfuture_theme", theme) } catch {}
+    document.body.classList.toggle("dark", theme === "dark")
+  }, [theme])
 
   // Listen for trade events
   useEffect(() => {
@@ -65,6 +73,14 @@ export default function Sidebar({ active, onNavigate, userName, onLogout, refres
         transition={{ delay: 0.1, duration: 0.3 }}
       >
         <img src="/icons/F-Kernel.png" alt="Kernel" style={{...s.logoImg, cursor: "pointer"}} onClick={() => onNavigate("home")} />
+        <button
+          type="button"
+          onClick={() => setTheme(t => (t === "dark" ? "light" : "dark"))}
+          style={s.themeBtn}
+          title={theme === "dark" ? "Светлая тема" : "Тёмная тема"}
+        >
+          {theme === "dark" ? "☀️" : "🌙"}
+        </button>
       </Motion.div>
 
       <div style={{ ...s.divider, ...(isMobile ? s.dividerMobile : {}) }} />
@@ -225,8 +241,8 @@ const s = {
     top: 0,
     bottom: 0,
     width: 260,
-    background: "#ffffff",
-    borderRight: "1px solid rgba(0,0,0,0.08)",
+    background: "var(--card-bg)",
+    borderRight: "1px solid var(--border-color)",
     display: "flex",
     flexDirection: "column",
     padding: "20px 16px",
@@ -240,7 +256,7 @@ const s = {
     bottom: "auto",
     left: "auto",
     borderRight: "none",
-    borderBottom: "1px solid rgba(0,0,0,0.08)",
+    borderBottom: "1px solid var(--border-color)",
     padding: "12px 12px 10px",
     zIndex: 200,
     overflowY: "visible",
@@ -256,6 +272,21 @@ const s = {
     height: 32,
     objectFit: "contain",
   },
+  themeBtn: {
+    marginLeft: "auto",
+    width: 36,
+    height: 36,
+    borderRadius: 10,
+    border: "1px solid var(--border-color)",
+    background: "rgba(0,0,0,0.04)",
+    color: "var(--text-primary)",
+    cursor: "pointer",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    fontSize: 16,
+    transition: "background-color 0.2s ease, border-color 0.2s ease, transform 0.1s ease",
+  },
   divider: {
     height: 1,
     background: "rgba(0,0,0,0.06)",
@@ -265,7 +296,7 @@ const s = {
     margin: "10px 0",
   },
   portfolioBox: {
-    background: "#f6f7f8",
+    background: "rgba(0,0,0,0.04)",
     borderRadius: 12,
     padding: "12px 14px",
     cursor: "pointer",
@@ -273,7 +304,7 @@ const s = {
   },
   portfolioLabel: {
     fontSize: 11,
-    color: "rgba(0,0,0,0.45)",
+    color: "var(--text-dim)",
     textTransform: "uppercase",
     letterSpacing: 1,
     marginBottom: 4,
@@ -282,7 +313,7 @@ const s = {
   portfolioValue: {
     fontSize: 20,
     fontWeight: 700,
-    color: "#1a1a1a",
+    color: "var(--text-primary)",
   },
   portfolioPnl: {
     fontSize: 13,
@@ -291,7 +322,7 @@ const s = {
   },
   portfolioFree: {
     fontSize: 11,
-    color: "rgba(0,0,0,0.4)",
+    color: "var(--text-dim)",
     marginTop: 4,
   },
   nav: {
@@ -313,7 +344,7 @@ const s = {
     border: "none",
     borderRadius: 10,
     background: "transparent",
-    color: "rgba(0,0,0,0.55)",
+    color: "var(--text-dim)",
     fontSize: 14,
     fontWeight: 500,
     cursor: "pointer",
@@ -334,7 +365,7 @@ const s = {
   },
   navBtnActive: {
     background: "rgba(255,221,45,0.15)",
-    color: "#1a1a1a",
+    color: "var(--text-primary)",
     fontWeight: 600,
   },
   navIconImg: {
@@ -352,7 +383,7 @@ const s = {
   },
   levelBox: {
     padding: "12px 14px",
-    background: "#f6f7f8",
+    background: "rgba(0,0,0,0.04)",
     borderRadius: 12,
     marginBottom: 8,
   },
@@ -366,11 +397,11 @@ const s = {
   levelName: {
     fontSize: 13,
     fontWeight: 600,
-    color: "#1a1a1a",
+    color: "var(--text-primary)",
   },
   xpBar: {
     height: 6,
-    background: "rgba(0,0,0,0.06)",
+    background: "rgba(0,0,0,0.10)",
     borderRadius: 3,
     overflow: "hidden",
     marginBottom: 4,
@@ -383,7 +414,7 @@ const s = {
   },
   xpText: {
     fontSize: 11,
-    color: "rgba(0,0,0,0.4)",
+    color: "var(--text-dim)",
   },
   streakBox: {
     display: "flex",
@@ -401,7 +432,7 @@ const s = {
   },
   streakLabel: {
     fontSize: 13,
-    color: "rgba(0,0,0,0.45)",
+    color: "var(--text-dim)",
   },
   userBox: {
     display: "flex",
@@ -432,24 +463,24 @@ const s = {
   userName: {
     fontSize: 13,
     fontWeight: 600,
-    color: "#1a1a1a",
+    color: "var(--text-primary)",
     whiteSpace: "nowrap",
     overflow: "hidden",
     textOverflow: "ellipsis",
   },
   userEmail: {
     fontSize: 11,
-    color: "rgba(0,0,0,0.4)",
+    color: "var(--text-dim)",
     whiteSpace: "nowrap",
     overflow: "hidden",
     textOverflow: "ellipsis",
   },
   logoutBtn: {
     padding: "8px 14px",
-    border: "1px solid rgba(0,0,0,0.08)",
+    border: "1px solid var(--border-color)",
     borderRadius: 8,
     background: "transparent",
-    color: "rgba(0,0,0,0.45)",
+    color: "var(--text-dim)",
     fontSize: 12,
     cursor: "pointer",
     fontFamily: "inherit",

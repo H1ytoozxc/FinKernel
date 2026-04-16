@@ -753,12 +753,13 @@ async def get_dashboard(
         },
     }
 
-    # Add forecast
-    if prediction and prediction.get("days_left"):
-        days_left = int(prediction["days_left"])
-        daily_avg = (
-            int(balance_data.get("balance", 0) / days_left) if days_left > 0 else 0
-        )
+    # Add forecast (days_left can be 0; treat None as missing)
+    if prediction and ("days_left" in prediction) and (prediction.get("days_left") is not None):
+        days_left = int(prediction.get("days_left") or 0)
+        daily_avg = 0
+        if days_left > 0:
+            # Keep legacy behavior if AI doesn't provide a daily average.
+            daily_avg = int(balance_data.get("balance", 0) / days_left)
         dashboard["forecast"] = {"days_left": days_left, "daily_avg": daily_avg}
 
     # Cache result for 30 seconds
@@ -983,6 +984,56 @@ async def ai_chat(
     except httpx.HTTPError as e:
         logger.error(f"AI chat error: {e}")
         raise HTTPException(500, "AI chat unavailable")
+
+
+class ParseTransactionRequest(BaseModel):
+    text: str
+
+
+@app.post("/api/parse-transaction")
+async def parse_transaction(
+    request: Request,
+    req: ParseTransactionRequest,
+    user: UserContext = Depends(get_current_user),
+):
+    """
+    Parse a natural-language transaction description into structured fields.
+    Proxies to AI service; used by UI helpers (category auto-detect, receipt parse, voice).
+    """
+    await apply_rate_limit(request, rate_limiter, "ai:chat", str(user.user_id))
+    request_id = getattr(request.state, "request_id", "unknown")
+
+    try:
+        # Prefer categories the user actually uses (from DB via transaction-service)
+        known_categories = []
+        try:
+            txns_resp = await default_client.get(
+                f"{TRANSACTIONS_URL}/transactions/{user.user_id}?limit=100",
+                request_id=request_id,
+            )
+            if txns_resp.status_code == 200:
+                txns = txns_resp.json() or []
+                cats = []
+                for t in txns:
+                    eng_cat = t.get("category")
+                    if eng_cat:
+                        cats.append(CATEGORY_MAP.get(eng_cat, eng_cat))
+                # preserve order, unique
+                seen = set()
+                known_categories = [c for c in cats if c and not (c in seen or seen.add(c))]
+                known_categories = known_categories[:20]
+        except Exception:
+            known_categories = []
+
+        resp = await long_timeout_client.post(
+            f"{AI_URL}/parse-transaction",
+            json={"text": req.text, "user_id": user.user_id, "known_categories": known_categories},
+            request_id=request_id,
+        )
+        return resp.json()
+    except httpx.HTTPError as e:
+        logger.error(f"parse-transaction error: {e}")
+        raise HTTPException(500, "parse-transaction unavailable")
 
 
 @app.get("/api/v2/ai-advice")

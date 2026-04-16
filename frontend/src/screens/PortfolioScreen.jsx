@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react"
 import { motion as Motion } from "framer-motion"
-import { getDashboard, addTransaction, getTransactions, deleteTransaction } from "../api"
+import { getDashboard, addTransaction, getTransactions, deleteTransaction, parseTransactionText } from "../api"
 import { getSettings } from "../settings"
 
 const container = {
@@ -50,6 +50,34 @@ function AnimatedNumber({ value, suffix = "", masked = false }) {
   return <>{display.toLocaleString("ru-RU")}{suffix}</>
 }
 
+function csvEscape(v) {
+  const s = String(v ?? "")
+  if (/[",\n]/.test(s)) return `"${s.replace(/"/g, '""')}"`
+  return s
+}
+
+function downloadTransactionsCsv(transactions, filename = "finkernel-report.csv") {
+  const header = ["date", "type", "category", "amount", "comment"]
+  const rows = (transactions || []).map(t => ([
+    t?.date ? new Date(t.date).toISOString() : "",
+    t?.type || "",
+    t?.category || "",
+    (t?.amount ?? ""),
+    (t?.comment || t?.description || ""),
+  ].map(csvEscape).join(",")))
+
+  const csv = [header.join(","), ...rows].join("\n")
+  const blob = new Blob([csv], { type: "text/csv;charset=utf-8" })
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement("a")
+  a.href = url
+  a.download = filename
+  document.body.appendChild(a)
+  a.click()
+  a.remove()
+  URL.revokeObjectURL(url)
+}
+
 export default function TransactionsScreen({ onRefresh }) {
   const [balance, setBalance] = useState(null)
   const [transactions, setTransactions] = useState([])
@@ -66,6 +94,7 @@ export default function TransactionsScreen({ onRefresh }) {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
   const [settings, setSettings] = useState(getSettings)
+  const [categoryAuto, setCategoryAuto] = useState({ status: "idle", lastText: "" })
 
   useEffect(() => {
     const handler = () => setSettings(getSettings())
@@ -94,6 +123,34 @@ export default function TransactionsScreen({ onRefresh }) {
   }
 
   useEffect(() => { refresh() }, [])
+
+  // Auto-detect category from comment (only if user hasn't picked yet)
+  useEffect(() => {
+    if (!showAddModal) return
+
+    const text = (newTransaction.comment || "").trim()
+    if (text.length < 3) return
+    if (newTransaction.category) return
+    if (categoryAuto.status === "loading") return
+    if (categoryAuto.lastText === text) return
+
+    const handle = setTimeout(() => {
+      setCategoryAuto({ status: "loading", lastText: text })
+      parseTransactionText(text)
+        .then((parsed) => {
+          const cat = parsed?.category
+          const type = parsed?.type
+          if (!cat || !type) return
+          // Respect current type toggle; only auto-fill category.
+          if (type !== newTransaction.type) return
+          setNewTransaction((prev) => (prev.category ? prev : { ...prev, category: cat }))
+        })
+        .catch(() => {})
+        .finally(() => setCategoryAuto((prev) => ({ ...prev, status: "idle" })))
+    }, 550)
+
+    return () => clearTimeout(handle)
+  }, [showAddModal, newTransaction.comment, newTransaction.category, newTransaction.type, categoryAuto.status, categoryAuto.lastText])
 
   const handleAddTransaction = () => {
     if (!newTransaction.amount || !newTransaction.category) {
@@ -131,14 +188,24 @@ export default function TransactionsScreen({ onRefresh }) {
             <span style={{ color: "#f44336" }}>↓ {mask((balance.expenses_month || 0).toLocaleString("ru-RU"))} с</span>
           </div>
         </div>
-        <Motion.button
-          style={s.addBtn}
-          onClick={() => setShowAddModal(true)}
-          whileHover={{ scale: 1.05 }}
-          whileTap={{ scale: 0.95 }}
-        >
-          + Добавить
-        </Motion.button>
+        <div style={s.headerActions}>
+          <Motion.button
+            style={s.exportBtn}
+            onClick={() => downloadTransactionsCsv(filteredTransactions, `finkernel-report-${view}.csv`)}
+            whileHover={{ y: -1 }}
+            whileTap={{ scale: 0.97 }}
+          >
+            Скачать отчет
+          </Motion.button>
+          <Motion.button
+            style={s.addBtn}
+            onClick={() => setShowAddModal(true)}
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+          >
+            + Добавить
+          </Motion.button>
+        </div>
       </Motion.div>
 
       {/* Message */}
@@ -334,9 +401,28 @@ const s = {
     display: "flex", justifyContent: "space-between", alignItems: "flex-start",
     marginBottom: 16,
   },
+  headerActions: {
+    display: "flex",
+    gap: 10,
+    alignItems: "center",
+    flexWrap: "wrap",
+    justifyContent: "flex-end",
+  },
   headerLabel: { fontSize: 11, color: "rgba(0,0,0,0.4)", letterSpacing: 2, marginBottom: 6 },
   headerValue: { fontSize: 36, fontWeight: 800, color: "#1a1a1a", marginBottom: 4 },
   headerPnl: { fontSize: 16, fontWeight: 600 },
+  exportBtn: {
+    padding: "12px 16px",
+    borderRadius: 10,
+    border: "1px solid rgba(0,0,0,0.08)",
+    background: "rgba(0,0,0,0.02)",
+    color: "rgba(0,0,0,0.7)",
+    fontSize: 13,
+    fontWeight: 700,
+    cursor: "pointer",
+    fontFamily: "inherit",
+    whiteSpace: "nowrap",
+  },
   addBtn: {
     padding: "12px 24px", borderRadius: 10, border: "none",
     background: "#ffdd2d", color: "#1a1a1a", fontSize: 14, fontWeight: 700,

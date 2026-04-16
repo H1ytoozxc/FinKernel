@@ -135,6 +135,10 @@ const DELETE = () => ({
   method: "DELETE",
 })
 
+// ─── Helpers ───
+export const parseTransactionText = (text) =>
+  apiFetch(`${BASE}/parse-transaction`, POST_JSON({ text }))
+
 // ─── Auth ───
 // FIXED: Use correct paths /api/auth/register and /api/auth/login
 export const registerUser = async (email, name, password) => {

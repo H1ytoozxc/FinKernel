@@ -1,6 +1,8 @@
 import { useState, useEffect, useRef, useContext, useCallback } from "react"
 import { motion as Motion, AnimatePresence } from "framer-motion"
 import { DevContext } from "../DevContext"
+import Tesseract from "tesseract.js"
+import { addTransaction, parseTransactionText } from "../api"
 
 const API_BASE = import.meta.env.VITE_API_URL || "/api"
 const TOKEN = () => localStorage.getItem("finfuture_token") || ""
@@ -75,9 +77,12 @@ export default function AIAdvisorScreen({ onStartLesson, isMobile = false }) {
   const [aiAdvice, setAiAdvice] = useState(null)
   const [adviceLoading, setAdviceLoading] = useState(true)
   const [sending, setSending] = useState(false)
+  const [parsingReceipt, setParsingReceipt] = useState(false)
+  const [voiceActive, setVoiceActive] = useState(false)
   const [showTips, setShowTips] = useState(true)
   const chatEndRef = useRef(null)
   const inputRef = useRef(null)
+  const receiptFileRef = useRef(null)
 
   const scrollToBottom = useCallback(() => {
     chatEndRef.current?.scrollIntoView({ behavior: "smooth" })
@@ -97,9 +102,109 @@ export default function AIAdvisorScreen({ onStartLesson, isMobile = false }) {
       .finally(() => setAdviceLoading(false))
   }, [])
 
+  const pushAssistant = useCallback((text, extra = {}) => {
+    setMessages(prev => [...prev, { role: "assistant", text, ...extra }])
+  }, [])
+
+  const runReceiptText = useCallback(async (text) => {
+    const payload = (text || "").trim()
+    if (!payload) {
+      pushAssistant("Пришли текст чека или фото, и я добавлю транзакцию. Можно просто вставить текст после команды «Распознай чек».")
+      return
+    }
+
+    setParsingReceipt(true)
+    try {
+      const parsed = await parseTransactionText(payload)
+      const amount = parsed?.amount
+      const category = parsed?.category
+      const type = parsed?.type
+      const description = parsed?.description || payload.slice(0, 120)
+
+      if (!type || !category) {
+        pushAssistant("Не смог определить категорию. Попробуй добавить пару слов: например «такси», «кофе», «аптека».")
+        return
+      }
+      if (amount == null || Number.isNaN(Number(amount))) {
+        pushAssistant("Не вижу сумму в чеке. Напиши сумму рядом (например: «ИТОГО 540») или скажи одной фразой: «Потратил 540 на …».")
+        return
+      }
+
+      await addTransaction({
+        amount,
+        category,
+        type,
+        comment: description,
+      })
+
+      pushAssistant(`Готово. Добавил: ${type === "income" ? "+" : "-"}${Number(amount).toLocaleString("ru-RU")} с • ${category}.`)
+      window.dispatchEvent(new Event("finfuture-transaction"))
+    } catch {
+      pushAssistant("Не получилось распознать чек. Попробуй ещё раз или вставь текст без лишних символов.")
+    } finally {
+      setParsingReceipt(false)
+    }
+  }, [pushAssistant])
+
+  const startVoice = useCallback(() => {
+    const SR = window.SpeechRecognition || window.webkitSpeechRecognition
+    if (!SR || voiceActive) return
+    try {
+      const rec = new SR()
+      rec.lang = "ru-RU"
+      rec.interimResults = true
+      rec.maxAlternatives = 1
+
+      setVoiceActive(true)
+      let finalText = ""
+
+      rec.onresult = (e) => {
+        let interim = ""
+        for (let i = e.resultIndex; i < e.results.length; i++) {
+          const t = e.results[i][0]?.transcript || ""
+          if (e.results[i].isFinal) finalText += t
+          else interim += t
+        }
+        const merged = (finalText + " " + interim).trim()
+        if (merged) setInputText(merged)
+      }
+      rec.onend = () => setVoiceActive(false)
+      rec.onerror = () => setVoiceActive(false)
+      rec.start()
+    } catch {
+      setVoiceActive(false)
+    }
+  }, [voiceActive])
+
+  const onPickReceipt = useCallback(async (file) => {
+    if (!file) return
+    setMessages(prev => [...prev, { role: "user", text: "Распознай чек (фото)" }])
+    setInputText("")
+    setSending(false)
+    setParsingReceipt(true)
+    try {
+      const { data } = await Tesseract.recognize(file, "rus+eng")
+      const text = (data?.text || "").trim()
+      await runReceiptText(text)
+    } catch {
+      pushAssistant("Не смог прочитать текст с фото. Попробуй более чёткое фото или просто вставь текст чека.")
+      setParsingReceipt(false)
+    } finally {
+      if (receiptFileRef.current) receiptFileRef.current.value = ""
+    }
+  }, [pushAssistant, runReceiptText])
+
   const handleSendMessage = async (overrideMsg) => {
     const userMsg = (overrideMsg || inputText).trim()
     if (!userMsg || sending) return
+
+    if (/^распознай\s+чек\b/i.test(userMsg)) {
+      setMessages(prev => [...prev, { role: "user", text: userMsg }])
+      setInputText("")
+      const rest = userMsg.replace(/^распознай\s+чек\b[:\s-]*/i, "").trim()
+      await runReceiptText(rest)
+      return
+    }
 
     setMessages(prev => [...prev, { role: "user", text: userMsg }])
     setInputText("")
@@ -279,6 +384,41 @@ export default function AIAdvisorScreen({ onStartLesson, isMobile = false }) {
 
           {/* Input row */}
           <div style={s.inputRow}>
+            <input
+              ref={receiptFileRef}
+              type="file"
+              accept="image/*"
+              onChange={(e) => onPickReceipt(e.target.files?.[0])}
+              style={{ display: "none" }}
+            />
+
+            <Motion.button
+              style={{
+                ...s.iconBtn,
+                opacity: parsingReceipt ? 0.55 : 1,
+                cursor: parsingReceipt ? "not-allowed" : "pointer",
+              }}
+              onClick={() => !parsingReceipt && receiptFileRef.current?.click()}
+              disabled={parsingReceipt}
+              title="Распознать чек (фото)"
+              whileTap={!parsingReceipt ? { scale: 0.94 } : {}}
+            >
+              🧾
+            </Motion.button>
+
+            <Motion.button
+              style={{
+                ...s.iconBtn,
+                background: voiceActive ? "rgba(255,221,45,0.18)" : "rgba(0,0,0,0.04)",
+                borderColor: voiceActive ? "rgba(255,221,45,0.35)" : "rgba(0,0,0,0.06)",
+              }}
+              onClick={startVoice}
+              title="Голосовой ввод"
+              whileTap={{ scale: 0.94 }}
+            >
+              🎙️
+            </Motion.button>
+
             <div style={s.inputWrap}>
               <input
                 ref={inputRef}
@@ -286,9 +426,9 @@ export default function AIAdvisorScreen({ onStartLesson, isMobile = false }) {
                 value={inputText}
                 onChange={e => setInputText(e.target.value)}
                 onKeyDown={handleKeyDown}
-                placeholder="Задай вопрос о финансах..."
+                placeholder={parsingReceipt ? "Распознаю чек..." : "Задай вопрос о финансах..."}
                 style={s.input}
-                disabled={sending}
+                disabled={sending || parsingReceipt}
                 maxLength={1000}
               />
               {inputText && (
@@ -303,13 +443,13 @@ export default function AIAdvisorScreen({ onStartLesson, isMobile = false }) {
             <Motion.button
               style={{
                 ...s.sendBtn,
-                opacity: (!inputText.trim() || sending) ? 0.45 : 1,
-                cursor: (!inputText.trim() || sending) ? "not-allowed" : "pointer",
+                opacity: (!inputText.trim() || sending || parsingReceipt) ? 0.45 : 1,
+                cursor: (!inputText.trim() || sending || parsingReceipt) ? "not-allowed" : "pointer",
               }}
               onClick={() => handleSendMessage()}
-              disabled={!inputText.trim() || sending}
-              whileHover={inputText.trim() && !sending ? { scale: 1.06 } : {}}
-              whileTap={inputText.trim() && !sending ? { scale: 0.93 } : {}}
+              disabled={!inputText.trim() || sending || parsingReceipt}
+              whileHover={inputText.trim() && !sending && !parsingReceipt ? { scale: 1.06 } : {}}
+              whileTap={inputText.trim() && !sending && !parsingReceipt ? { scale: 0.93 } : {}}
             >
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none"
                 stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
@@ -647,6 +787,19 @@ const s = {
     padding: "14px 20px",
     borderTop: "1px solid rgba(0,0,0,0.05)",
     background: "#fcfcfc",
+    flexShrink: 0,
+  },
+  iconBtn: {
+    width: 46,
+    height: 46,
+    borderRadius: 12,
+    border: "1px solid rgba(0,0,0,0.06)",
+    background: "rgba(0,0,0,0.04)",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    fontSize: 18,
+    cursor: "pointer",
     flexShrink: 0,
   },
   inputWrap: {

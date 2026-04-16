@@ -1,0 +1,19 @@
+{
+  "name": "FinKernel",
+  "short_name": "FinKernel",
+  "description": "Personal finance tracking",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#f6f7f8",
+  "theme_color": "#ffdd2d",
+  "icons": [
+    {
+      "src": "/pwa-icon.svg",
+      "sizes": "512x512",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
+

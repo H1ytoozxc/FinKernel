@@ -2,6 +2,8 @@
 SECURE AI SERVICE - Prompt injection protection
 """
 
+import json
+import re
 import sys
 import time
 import os
@@ -289,6 +291,186 @@ async def ai_chat(req: ChatRequest, db: AsyncSession = Depends(get_db)):
         "response": "Хороший вопрос! Я анализирую твои финансы и могу помочь с бюджетом, расходами, сбережениями и инвестициями. Задай более конкретный вопрос — например, 'как сэкономить на еде?' или 'куда инвестировать?'",
         "provider": "fallback",
     }
+
+
+class ParseTransactionRequest(BaseModel):
+    text: str
+    user_id: int | None = None
+    known_categories: list[str] | None = None
+
+
+@app.post("/parse-transaction")
+async def parse_transaction(
+    request: Request,
+    req: ParseTransactionRequest,
+):
+    """
+    Parse a natural-language transaction description into structured fields.
+    Used for auto category detection, receipt text parsing, and voice text parsing.
+    """
+    request_id = getattr(request.state, "request_id", "unknown")
+    raw_text = (req.text or "").strip()
+    if not raw_text or len(raw_text) > 2000:
+        raise HTTPException(400, "Invalid text")
+
+    safe_text = sanitize_for_llm(raw_text, max_length=600)
+
+    # Allowed categories (frontend-facing, Russian)
+    expense_categories = ["Еда", "Транспорт", "Развлечения", "Покупки", "Здоровье", "Образование", "Другое"]
+    income_categories = ["Зарплата", "Фриланс", "Инвестиции", "Подарок", "Другое"]
+
+    # Prefer categories known from user's history (DB-backed via gateway)
+    known = [c for c in (req.known_categories or []) if isinstance(c, str)]
+    known = [c.strip() for c in known if c.strip()]
+    known = known[:20]
+
+    # Fast local fallback (works even with no LLM)
+    def local_parse(text: str) -> dict:
+        t = text.lower()
+        amount = None
+        m = re.search(r"(\d[\d\s]{0,12})(?:[.,](\d{1,2}))?", t)
+        if m:
+            integer = (m.group(1) or "").replace(" ", "")
+            frac = m.group(2)
+            try:
+                amount = float(f"{integer}.{frac}" if frac else integer)
+            except Exception:
+                amount = None
+
+        is_income = any(k in t for k in ["получ", "заработ", "зарплат", "приход", "доход", "преми"])
+        is_expense = any(k in t for k in ["потрат", "купил", "оплат", "расход", "трата", "снял", "такси", "еда", "магазин"])
+        tx_type = "income" if is_income and not is_expense else "expense"
+
+        cat = "Другое"
+        if tx_type == "expense":
+            if any(k in t for k in ["такси", "метро", "автобус", "транспорт", "бенз", "азс", "каршер"]):
+                cat = "Транспорт"
+            elif any(k in t for k in ["еда", "кофе", "кафе", "ресторан", "обед", "ужин", "продукт", "магазин"]):
+                cat = "Еда"
+            elif any(k in t for k in ["кино", "игр", "развлеч", "подпис", "netflix", "spotify"]):
+                cat = "Развлечения"
+            elif any(k in t for k in ["аптек", "врач", "анализ", "лекар", "здоров"]):
+                cat = "Здоровье"
+            elif any(k in t for k in ["курс", "учеб", "книга", "образован"]):
+                cat = "Образование"
+            elif any(k in t for k in ["одежд", "обув", "покуп", "маркет", "ozon", "wildberries"]):
+                cat = "Покупки"
+            if cat not in expense_categories:
+                cat = "Другое"
+        else:
+            if "зарплат" in t:
+                cat = "Зарплата"
+            elif any(k in t for k in ["фриланс", "заказ", "проект"]):
+                cat = "Фриланс"
+            elif any(k in t for k in ["дивиден", "инвест", "купоны", "проценты"]):
+                cat = "Инвестиции"
+            elif any(k in t for k in ["подар", "перевод"]):
+                cat = "Подарок"
+            if cat not in income_categories:
+                cat = "Другое"
+
+        desc = raw_text.strip()
+        if len(desc) > 140:
+            desc = desc[:140].rstrip() + "…"
+
+        parsed = {
+            "type": tx_type,
+            "amount": amount,
+            "category": cat,
+            "description": desc,
+            "confidence": 0.55,
+            "provider": "fallback",
+        }
+        # If category matches known history, bump confidence slightly.
+        if parsed["category"] in known:
+            parsed["confidence"] = 0.62
+        return parsed
+
+    local = local_parse(raw_text)
+
+    # Try LLM providers in cascade (same clients as chat)
+    providers = []
+    if engine.groq and engine.groq.client:
+        providers.append(("Groq", engine.groq.client, engine.groq.model))
+    if engine.openrouter and engine.openrouter.client:
+        providers.append(("OpenRouter", engine.openrouter.client, engine.openrouter.model))
+
+    system = (
+        "Ты парсер финансовых транзакций для приложения. "
+        "Верни ТОЛЬКО JSON без пояснений. "
+        "Категории строго из списка. "
+        "Если сумма не указана — amount=null. "
+        "type строго: income | expense."
+    )
+    allowed = {
+        "expense": expense_categories,
+        "income": income_categories,
+    }
+    preferred = f"\nПредпочитай категории пользователя (если подходит): {known}\n" if known else ""
+    user_prompt = (
+        "Распарсь текст в транзакцию.\n"
+        f"Текст: {safe_text}\n\n"
+        + preferred
+        "Верни JSON:\n"
+        "{\n"
+        '  "type": "expense|income",\n'
+        '  "amount": number|null,\n'
+        f'  "category": "<one of expense:{expense_categories} or income:{income_categories}>",\n'
+        '  "description": "short string <= 140 chars"\n'
+        "}"
+    )
+
+    for provider_name, client, model in providers:
+        try:
+            resp = await client.chat.completions.create(
+                model=model,
+                messages=[
+                    {"role": "system", "content": system},
+                    {"role": "user", "content": user_prompt},
+                ],
+                temperature=0.2,
+                max_tokens=220,
+                timeout=10.0,
+            )
+            content = (resp.choices[0].message.content or "").strip()
+            if "```json" in content:
+                content = content.split("```json")[1].split("```")[0].strip()
+            elif "```" in content:
+                content = content.split("```")[1].split("```")[0].strip()
+
+            data = json.loads(content)
+            tx_type = data.get("type")
+            if tx_type not in ("expense", "income"):
+                raise ValueError("invalid type")
+
+            category = data.get("category")
+            if category not in allowed[tx_type]:
+                category = local["category"] if local["type"] == tx_type else "Другое"
+
+            amount = data.get("amount")
+            if amount is not None:
+                try:
+                    amount = float(amount)
+                except Exception:
+                    amount = local["amount"]
+
+            desc = str(data.get("description") or local["description"])
+            desc = sanitize_for_llm(desc, max_length=140)
+
+            logger.info(f"[{request_id}] Parsed transaction via {provider_name}")
+            return {
+                "type": tx_type,
+                "amount": amount,
+                "category": category,
+                "description": desc,
+                "confidence": 0.75,
+                "provider": provider_name.lower(),
+            }
+        except Exception as e:
+            logger.warning(f"[{request_id}] parse-transaction via {provider_name} failed: {e}")
+            continue
+
+    return local
 
 
 @app.get("/ai-advice/{user_id}")
