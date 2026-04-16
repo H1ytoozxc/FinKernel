@@ -31,6 +31,11 @@
   --text-primary: #1a1a1a;
   --card-bg: #ffffff;
   --border-color: rgba(0, 0, 0, 0.08);
+  --hover-bg: rgba(0, 0, 0, 0.04);
+  
+  /* Header specific */
+  --header-bg: #ffffff;
+  --header-bg-scrolled: rgba(255, 255, 255, 0.92);
 
   /* Back-compat aliases used throughout the app */
   --bg: var(--bg-primary);
@@ -95,12 +100,41 @@ body.dark {
   --text-primary: rgba(255, 255, 255, 0.92);
   --card-bg: #151a21;
   --border-color: rgba(255, 255, 255, 0.10);
+  --hover-bg: rgba(255, 255, 255, 0.06);
+  
+  /* Header specific dark */
+  --header-bg: #151a21;
+  --header-bg-scrolled: rgba(21, 26, 33, 0.95);
 
   --text-dim: rgba(255, 255, 255, 0.62);
   --text-muted: rgba(255, 255, 255, 0.42);
   --accent-bg: rgba(255, 221, 45, 0.16);
 
   color-scheme: dark;
+}
+
+/* Dark mode scrollbar */
+body.dark ::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.15);
+}
+body.dark ::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.25);
+}
+
+/* Dark mode selection */
+body.dark ::selection {
+  background: rgba(255, 221, 45, 0.3);
+  color: #ffffff;
+}
+
+/* Dark mode input placeholder */
+body.dark input::placeholder {
+  color: rgba(255, 255, 255, 0.35);
+}
+
+/* Dark mode range slider */
+body.dark input[type="range"] {
+  background: rgba(255, 255, 255, 0.1);
 }
 
 h1, h2, h3 {
@@ -148,6 +182,7 @@ input[type="number"]::-webkit-inner-spin-button {
 /* Remove number input arrows (Firefox) */
 input[type="number"] {
   -moz-appearance: textfield;
+  appearance: textfield;
 }
 
 /* Range slider */
@@ -300,6 +335,35 @@ input[type="range"]::-moz-range-thumb {
   body {
     overscroll-behavior-x: none;
     overflow-x: hidden;
+    /* Prevent bounce on iOS */
+    overscroll-behavior-y: none;
+  }
+  
+  /* Mobile header styles */
+  header {
+    height: 56px !important;
+  }
+  
+  /* Mobile dark mode header adjustments */
+  body.dark header {
+    background: var(--header-bg) !important;
+    border-bottom-color: var(--border-color) !important;
+  }
+  
+  body.dark header[style*="scrolled"] {
+    background: var(--header-bg-scrolled) !important;
+  }
+  
+  /* Ensure proper safe area handling on mobile */
+  @supports (padding-top: env(safe-area-inset-top)) {
+    header {
+      padding-top: env(safe-area-inset-top) !important;
+      height: calc(56px + env(safe-area-inset-top)) !important;
+    }
+    
+    main {
+      padding-top: calc(72px + env(safe-area-inset-top)) !important;
+    }
   }
 
   h1 {
@@ -509,6 +573,24 @@ input[type="range"]::-moz-range-thumb {
   background-size: 200% 100%;
   animation: shimmer 1.5s infinite;
   border-radius: 8px;
+}
+
+/* Dark mode skeleton */
+body.dark .skeleton {
+  background: linear-gradient(90deg,
+    rgba(255,255,255,0.05) 25%,
+    rgba(255,255,255,0.10) 50%,
+    rgba(255,255,255,0.05) 75%
+  );
+}
+
+/* Dark mode card hover */
+body.dark .card-hover:hover {
+  box-shadow: 0 8px 24px rgba(0,0,0,0.3) !important;
+}
+
+body.dark .stat-hover:hover {
+  box-shadow: 0 10px 28px rgba(0,0,0,0.35) !important;
 }
 
 /* Remove focus outline on buttons */

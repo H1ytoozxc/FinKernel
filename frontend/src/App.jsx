@@ -8,7 +8,7 @@ const pageVariants = {
   exit:    { opacity: 0, y: -10, scale: 0.99, transition: { duration: 0.18 } },
 }
 const LLM_MODEL = "Qwen 2.5 7B"
-import Sidebar from "./components/Sidebar"
+import AppLayout from "./components/AppLayout"
 import HomeScreen from "./screens/HomeScreen"
 import TransactionsScreen from "./screens/PortfolioScreen"
 import AIAdvisorScreen from "./screens/LearnScreen"
@@ -175,7 +175,14 @@ export default function App() {
   // Step 3: Main app
   return (
     <DevContext.Provider value={{ devMode, timeOffset, unlockAll, aiStatus, setAiStatus: (msg) => { setAiStatus(msg); setAiLog(log => [...log.slice(-19), { time: new Date().toLocaleTimeString("ru-RU"), msg }]) }, aiLog }}>
-      <div style={{ ...s.layout, ...(isMobile ? s.layoutMobile : {}) }}>
+      <AppLayout
+        activeTab={tab}
+        onNavigate={handleNavigate}
+        userName={user}
+        onLogout={handleLogout}
+        refreshKey={refreshKey}
+        isMobile={isMobile}
+      >
         {/* Admin panel - only visible for admin@admin.com */}
         {isAdmin() && (
           <>
@@ -224,15 +231,7 @@ export default function App() {
           </>
         )}
 
-        <Sidebar
-          active={tab}
-          onNavigate={handleNavigate}
-          userName={user}
-          onLogout={handleLogout}
-          refreshKey={refreshKey}
-          isMobile={isMobile}
-        />
-        <main style={{ ...s.main, ...(isMobile ? s.mainMobile : {}) }}>
+        {/* Page Content */}
           {appSettings.animations ? (
             <AnimatePresence mode="wait">
               {screen === "home" && (
@@ -282,8 +281,7 @@ export default function App() {
               {screen === "settings" && <SettingsScreen />}
             </>
           )}
-        </main>
-      </div>
+      </AppLayout>
     </DevContext.Provider>
   )
 }
@@ -291,39 +289,17 @@ export default function App() {
 const s = {
   fullPage: {
     minHeight: "100vh",
-    background: "#f6f7f8",
+    background: "var(--bg-primary, #f6f7f8)",
     fontFamily: "Inter, sans-serif",
   },
   center: {
     minHeight: "100vh",
-    background: "#f6f7f8",
+    background: "var(--bg-primary, #f6f7f8)",
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
     fontFamily: "Inter, sans-serif",
-    color: "rgba(0,0,0,0.45)",
-  },
-  layout: {
-    display: "flex",
-    minHeight: "100vh",
-    background: "#f6f7f8",
-    fontFamily: "Inter, sans-serif",
-    color: "#1a1a1a",
-  },
-  layoutMobile: {
-    flexDirection: "column",
-  },
-  main: {
-    flex: 1,
-    marginLeft: 260,
-    minHeight: "100vh",
-    padding: "24px 32px",
-    overflowY: "auto",
-  },
-  mainMobile: {
-    marginLeft: 0,
-    minHeight: "auto",
-    padding: "16px 14px 24px",
+    color: "var(--text-dim, rgba(0,0,0,0.45))",
   },
   devBtn: {
     position: "fixed", bottom: 8, right: 8, zIndex: 9999,
@@ -334,36 +310,37 @@ const s = {
   },
   devPanel: {
     position: "fixed", bottom: 40, right: 8, zIndex: 9999,
-    background: "#fff", border: "1px solid rgba(0,0,0,0.15)",
+    background: "var(--card-bg, #fff)", border: "1px solid var(--border-color, rgba(0,0,0,0.15))",
     borderRadius: 10, padding: "12px 16px", width: 220,
     boxShadow: "0 4px 16px rgba(0,0,0,0.12)", fontSize: 12,
-    maxHeight: "60vh", overflowY: "auto",
+    maxHeight: "60vh", overflowY: "auto", color: "var(--text-primary, #1a1a1a)",
   },
   devTitle: {
     fontWeight: 700, fontSize: 13, marginBottom: 10,
-    color: "#1a1a1a", borderBottom: "1px solid rgba(0,0,0,0.06)", paddingBottom: 6,
+    color: "var(--text-primary, #1a1a1a)", borderBottom: "1px solid var(--border-color, rgba(0,0,0,0.06))", paddingBottom: 6,
   },
   devRow: {
     display: "flex", alignItems: "center", gap: 6, marginBottom: 8,
   },
   devLabel: {
-    flex: 1, fontSize: 12, color: "#1a1a1a", display: "flex", alignItems: "center", cursor: "pointer",
+    flex: 1, fontSize: 12, color: "var(--text-primary, #1a1a1a)", display: "flex", alignItems: "center", cursor: "pointer",
   },
   devAction: {
-    padding: "3px 8px", borderRadius: 5, border: "1px solid rgba(0,0,0,0.12)",
-    background: "#f6f7f8", cursor: "pointer", fontSize: 11, fontFamily: "inherit",
+    padding: "3px 8px", borderRadius: 5, border: "1px solid var(--border-color, rgba(0,0,0,0.12))",
+    background: "var(--bg-primary, #f6f7f8)", cursor: "pointer", fontSize: 11, fontFamily: "inherit",
+    color: "var(--text-primary, #1a1a1a)",
   },
   devInfo: {
-    fontSize: 10, color: "rgba(0,0,0,0.35)", marginTop: 4,
+    fontSize: 10, color: "var(--text-muted, rgba(0,0,0,0.35))", marginTop: 4,
   },
-  devDivider: { height: 1, background: "rgba(0,0,0,0.08)", margin: "10px 0" },
+  devDivider: { height: 1, background: "var(--border-color, rgba(0,0,0,0.08))", margin: "10px 0" },
   devAiHeader: {
     display: "flex", justifyContent: "space-between", alignItems: "center",
-    fontSize: 12, fontWeight: 600, color: "#1a1a1a", marginBottom: 4,
+    fontSize: 12, fontWeight: 600, color: "var(--text-primary, #1a1a1a)", marginBottom: 4,
   },
   devAiDot: { width: 8, height: 8, borderRadius: "50%" },
-  devAiStatus: { fontSize: 11, color: "rgba(0,0,0,0.5)", marginBottom: 6 },
-  devAiLog: { maxHeight: 120, overflowY: "auto", fontSize: 10, color: "rgba(0,0,0,0.4)" },
-  devAiLogEntry: { padding: "2px 0", borderBottom: "1px solid rgba(0,0,0,0.04)" },
-  devAiLogTime: { color: "rgba(0,0,0,0.25)", marginRight: 4 },
+  devAiStatus: { fontSize: 11, color: "var(--text-dim, rgba(0,0,0,0.5))", marginBottom: 6 },
+  devAiLog: { maxHeight: 120, overflowY: "auto", fontSize: 10, color: "var(--text-muted, rgba(0,0,0,0.4))" },
+  devAiLogEntry: { padding: "2px 0", borderBottom: "1px solid var(--border-color, rgba(0,0,0,0.04))" },
+  devAiLogTime: { color: "var(--text-muted, rgba(0,0,0,0.25))", marginRight: 4 },
 }
