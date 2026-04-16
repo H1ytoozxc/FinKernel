@@ -14,9 +14,6 @@ export default function NavigationDrawer({
 }) {
   const [data, setData] = useState(null)
   const [settings, setSettings] = useState(getSettings)
-  const [theme, setTheme] = useState(() => {
-    try { return localStorage.getItem("finfuture_theme") || "light" } catch { return "light" }
-  })
 
   // Load dashboard data
   useEffect(() => {
@@ -29,12 +26,6 @@ export default function NavigationDrawer({
     window.addEventListener("finfuture-settings", handler)
     return () => window.removeEventListener("finfuture-settings", handler)
   }, [])
-
-  // Theme toggle
-  useEffect(() => {
-    try { localStorage.setItem("finfuture_theme", theme) } catch {}
-    document.body.classList.toggle("dark", theme === "dark")
-  }, [theme])
 
   const hide = settings.hideBalance
   const mask = (val) => hide ? "•••••" : val
@@ -128,17 +119,6 @@ export default function NavigationDrawer({
               </span>
             </div>
           )}
-
-          {/* Theme Toggle */}
-          <button
-            onClick={() => setTheme(t => (t === "dark" ? "light" : "dark"))}
-            style={s.desktopThemeBtn}
-          >
-            <span>{theme === "dark" ? "☀️" : "🌙"}</span>
-            <span style={s.desktopThemeText}>
-              {theme === "dark" ? "Светлая тема" : "Тёмная тема"}
-            </span>
-          </button>
         </div>
       </aside>
     )
@@ -231,17 +211,6 @@ export default function NavigationDrawer({
 
             {/* Footer */}
             <div style={s.drawerFooter}>
-              {/* Theme Toggle */}
-              <button
-                onClick={() => setTheme(t => (t === "dark" ? "light" : "dark"))}
-                style={s.drawerThemeBtn}
-              >
-                <span style={s.drawerThemeIcon}>{theme === "dark" ? "☀️" : "🌙"}</span>
-                <span style={s.drawerThemeText}>
-                  {theme === "dark" ? "Светлая тема" : "Тёмная тема"}
-                </span>
-              </button>
-
               {/* Streak Badge */}
               {streak > 0 && (
                 <div style={s.drawerStreakBadge}>
@@ -406,24 +375,6 @@ const s = {
   desktopStreakLabel: {
     fontSize: 13,
     color: "var(--text-dim)",
-  },
-  desktopThemeBtn: {
-    display: "flex",
-    alignItems: "center",
-    gap: 10,
-    padding: "12px 14px",
-    border: "1px solid var(--border-color)",
-    borderRadius: 10,
-    background: "transparent",
-    color: "var(--text-dim)",
-    fontSize: 14,
-    cursor: "pointer",
-    transition: "all 0.2s",
-    width: "100%",
-    fontFamily: "inherit",
-  },
-  desktopThemeText: {
-    fontSize: 13,
   },
 
   // Mobile Drawer Styles
@@ -592,28 +543,6 @@ const s = {
     padding: "16px",
     borderTop: "1px solid var(--border-color)",
     marginTop: "auto",
-  },
-  drawerThemeBtn: {
-    flex: 1,
-    display: "flex",
-    alignItems: "center",
-    gap: 10,
-    padding: "12px 14px",
-    border: "1px solid var(--border-color)",
-    borderRadius: 10,
-    background: "transparent",
-    color: "var(--text-dim)",
-    fontSize: 14,
-    cursor: "pointer",
-    transition: "all 0.2s",
-    fontFamily: "inherit",
-  },
-  drawerThemeIcon: {
-    fontSize: 18,
-  },
-  drawerThemeText: {
-    fontSize: 14,
-    fontWeight: 500,
   },
   drawerStreakBadge: {
     display: "flex",

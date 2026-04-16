@@ -1,15 +1,15 @@
 import { useState, useEffect } from "react"
 import Header from "./Header"
-import NavigationDrawer from "./NavigationDrawer"
+import Sidebar from "./Sidebar"
 
-export default function AppLayout({ 
-  children, 
-  activeTab, 
-  onNavigate, 
-  userName, 
+export default function AppLayout({
+  children,
+  activeTab,
+  onNavigate,
+  userName,
   onLogout,
   refreshKey,
-  isMobile 
+  isMobile
 }) {
   const [drawerOpen, setDrawerOpen] = useState(false)
 
@@ -50,15 +50,16 @@ export default function AppLayout({
         />
       )}
 
-      {/* Navigation Drawer / Sidebar */}
-      <NavigationDrawer
-        isOpen={drawerOpen}
-        onClose={() => setDrawerOpen(false)}
+      {/* Sidebar */}
+      <Sidebar
         active={activeTab}
         onNavigate={onNavigate}
         userName={userName}
+        onLogout={onLogout}
         refreshKey={refreshKey}
         isMobile={isMobile}
+        isOpen={isMobile ? drawerOpen : true}
+        onClose={() => setDrawerOpen(false)}
       />
 
       {/* Main Content Area */}
@@ -95,7 +96,7 @@ const s = {
   },
   mainMobile: {
     marginLeft: 0,
-    padding: "72px 16px 24px",
+    padding: "60px 16px 24px",
     minHeight: "100vh",
     paddingBottom: "calc(24px + env(safe-area-inset-bottom, 0px))",
   },

@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from "react"
 import { motion as Motion } from "framer-motion"
 import { getDashboard, addTransaction, getTransactions, deleteTransaction, parseTransactionText } from "../api"
 import { getSettings } from "../settings"
+import useIsMobile from "../hooks/useIsMobile"
 
 const container = {
   hidden: {},
@@ -50,36 +51,8 @@ function AnimatedNumber({ value, suffix = "", masked = false }) {
   return <>{display.toLocaleString("ru-RU")}{suffix}</>
 }
 
-function csvEscape(v) {
-  const s = String(v ?? "")
-  if (/[;"\n]/.test(s)) return `"${s.replace(/"/g, '""')}"`
-  return s
-}
-
-function downloadTransactionsCsv(transactions, filename = "finkernel-report.csv") {
-  // Excel-friendly (RU): semicolon + BOM + human-readable dates
-  const header = ["Дата", "Тип", "Категория", "Сумма", "Комментарий"]
-  const rows = (transactions || []).map(t => ([
-    t?.date ? new Date(t.date).toLocaleString("ru-RU") : "",
-    t?.type === "income" ? "Доход" : t?.type === "expense" ? "Расход" : (t?.type || ""),
-    t?.category || "",
-    `${t?.type === "income" ? "+" : t?.type === "expense" ? "-" : ""}${(t?.amount ?? "").toString()}`,
-    (t?.comment || t?.description || "-"),
-  ].map(csvEscape).join(";")))
-
-  const csv = "\uFEFF" + [header.join(";"), ...rows].join("\n")
-  const blob = new Blob([csv], { type: "text/csv;charset=utf-8" })
-  const url = URL.createObjectURL(blob)
-  const a = document.createElement("a")
-  a.href = url
-  a.download = filename
-  document.body.appendChild(a)
-  a.click()
-  a.remove()
-  URL.revokeObjectURL(url)
-}
-
 export default function TransactionsScreen({ onRefresh }) {
+  const isMobile = useIsMobile()
   const [balance, setBalance] = useState(null)
   const [transactions, setTransactions] = useState([])
   const [view, setView] = useState("all") // all | income | expense
@@ -177,36 +150,26 @@ export default function TransactionsScreen({ onRefresh }) {
   return (
     <Motion.div style={s.page} variants={container} initial="hidden" animate="show">
       {/* Header */}
-      <Motion.div variants={item} style={s.header}>
+      <Motion.div variants={item} style={{ ...s.header, ...(isMobile ? s.headerMobile : {}) }}>
         <div>
           <div style={s.headerLabel}>ТЕКУЩИЙ БАЛАНС</div>
-          <div style={s.headerValue}>
+          <div style={{ ...s.headerValue, ...(isMobile ? s.headerValueMobile : {}) }}>
             <AnimatedNumber value={balance.current} suffix=" с" masked={hide} />
           </div>
-          <div style={s.headerPnl}>
+          <div style={{ ...s.headerPnl, ...(isMobile ? s.headerPnlMobile : {}) }}>
             <span style={{ color: "#21a038" }}>↑ {mask((balance.income_month || 0).toLocaleString("ru-RU"))} с</span>
             {" "}
             <span style={{ color: "#f44336" }}>↓ {mask((balance.expenses_month || 0).toLocaleString("ru-RU"))} с</span>
           </div>
         </div>
-        <div style={s.headerActions}>
-          <Motion.button
-            style={s.exportBtn}
-            onClick={() => downloadTransactionsCsv(filteredTransactions, `finkernel-report-${view}.csv`)}
-            whileHover={{ y: -1 }}
-            whileTap={{ scale: 0.97 }}
-          >
-            Скачать отчет
-          </Motion.button>
-          <Motion.button
-            style={s.addBtn}
-            onClick={() => setShowAddModal(true)}
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
-          >
-            + Добавить
-          </Motion.button>
-        </div>
+        <Motion.button
+          style={s.addBtn}
+          onClick={() => setShowAddModal(true)}
+          whileHover={{ scale: 1.05 }}
+          whileTap={{ scale: 0.95 }}
+        >
+          + Добавить
+        </Motion.button>
       </Motion.div>
 
       {/* Message */}
@@ -402,28 +365,15 @@ const s = {
     display: "flex", justifyContent: "space-between", alignItems: "flex-start",
     marginBottom: 16,
   },
-  headerActions: {
-    display: "flex",
-    gap: 10,
-    alignItems: "center",
-    flexWrap: "wrap",
-    justifyContent: "flex-end",
+  headerMobile: {
+    flexDirection: "column",
+    gap: 12,
   },
   headerLabel: { fontSize: 11, color: "rgba(0,0,0,0.4)", letterSpacing: 2, marginBottom: 6 },
   headerValue: { fontSize: 36, fontWeight: 800, color: "var(--text-primary)", marginBottom: 4 },
+  headerValueMobile: { fontSize: 28 },
   headerPnl: { fontSize: 16, fontWeight: 600 },
-  exportBtn: {
-    padding: "12px 16px",
-    borderRadius: 10,
-    border: "1px solid var(--border-color)",
-    background: "rgba(0,0,0,0.02)",
-    color: "var(--text-dim)",
-    fontSize: 13,
-    fontWeight: 700,
-    cursor: "pointer",
-    fontFamily: "inherit",
-    whiteSpace: "nowrap",
-  },
+  headerPnlMobile: { fontSize: 14 },
   addBtn: {
     padding: "12px 24px", borderRadius: 10, border: "none",
     background: "#ffdd2d", color: "#1a1a1a", fontSize: 14, fontWeight: 700,

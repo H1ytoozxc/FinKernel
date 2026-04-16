@@ -410,7 +410,7 @@ async def parse_transaction(
     user_prompt = (
         "Распарсь текст в транзакцию.\n"
         f"Текст: {safe_text}\n\n"
-        + preferred
+        f"{preferred}"
         "Верни JSON:\n"
         "{\n"
         '  "type": "expense|income",\n'

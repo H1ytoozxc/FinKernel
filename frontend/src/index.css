@@ -87,54 +87,10 @@ html, body, #root {
   min-height: 100vh;
   display: flex;
   flex-direction: column;
-  transition: background-color 0.3s ease, color 0.3s ease;
 }
 
 main {
   transition: background-color 0.3s ease, color 0.3s ease;
-}
-
-/* Dark mode: premium dark-fintech tones (no pure black) */
-body.dark {
-  --bg-primary: #0f1217;
-  --text-primary: rgba(255, 255, 255, 0.92);
-  --card-bg: #151a21;
-  --border-color: rgba(255, 255, 255, 0.10);
-  --hover-bg: rgba(255, 255, 255, 0.06);
-  
-  /* Header specific dark */
-  --header-bg: #151a21;
-  --header-bg-scrolled: rgba(21, 26, 33, 0.95);
-
-  --text-dim: rgba(255, 255, 255, 0.62);
-  --text-muted: rgba(255, 255, 255, 0.42);
-  --accent-bg: rgba(255, 221, 45, 0.16);
-
-  color-scheme: dark;
-}
-
-/* Dark mode scrollbar */
-body.dark ::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.15);
-}
-body.dark ::-webkit-scrollbar-thumb:hover {
-  background: rgba(255, 255, 255, 0.25);
-}
-
-/* Dark mode selection */
-body.dark ::selection {
-  background: rgba(255, 221, 45, 0.3);
-  color: #ffffff;
-}
-
-/* Dark mode input placeholder */
-body.dark input::placeholder {
-  color: rgba(255, 255, 255, 0.35);
-}
-
-/* Dark mode range slider */
-body.dark input[type="range"] {
-  background: rgba(255, 255, 255, 0.1);
 }
 
 h1, h2, h3 {

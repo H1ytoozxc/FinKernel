@@ -1,24 +1,16 @@
 import { useState, useEffect } from "react"
-import { motion as Motion } from "framer-motion"
+import { motion as Motion, AnimatePresence } from "framer-motion"
 import { getDashboard } from "../api"
 import { getSettings } from "../settings"
 
-export default function Sidebar({ active, onNavigate, userName, onLogout, refreshKey, isMobile = false }) {
+export default function Sidebar({ active, onNavigate, userName, onLogout, refreshKey, isMobile = false, isOpen = true, onClose }) {
   const [data, setData] = useState(null)
   const [localRefresh, setLocalRefresh] = useState(0)
   const [settings, setSettings] = useState(getSettings)
-  const [theme, setTheme] = useState(() => {
-    try { return localStorage.getItem("finfuture_theme") || "light" } catch { return "light" }
-  })
 
   useEffect(() => {
     getDashboard().then(setData).catch(() => {})
   }, [refreshKey, localRefresh])
-
-  useEffect(() => {
-    try { localStorage.setItem("finfuture_theme", theme) } catch {}
-    document.body.classList.toggle("dark", theme === "dark")
-  }, [theme])
 
   // Listen for trade events
   useEffect(() => {
@@ -58,6 +50,101 @@ export default function Sidebar({ active, onNavigate, userName, onLogout, refres
     { id: "settings", label: "Настройки", icon: "/icons/free-icon-setting-6619132.png" },
   ]
 
+  const handleNavigate = (tabId) => {
+    onNavigate(tabId)
+    if (isMobile && onClose) {
+      onClose()
+    }
+  }
+
+  // Mobile drawer
+  if (isMobile) {
+    return (
+      <AnimatePresence>
+        {isOpen && (
+          <>
+            {/* Backdrop */}
+            <Motion.div
+              style={s.backdrop}
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.25 }}
+              onClick={onClose}
+            />
+
+            {/* Drawer */}
+            <Motion.div
+              style={s.drawer}
+              initial={{ x: "-100%" }}
+              animate={{ x: 0 }}
+              exit={{ x: "-100%" }}
+              transition={{ type: "spring", stiffness: 300, damping: 30 }}
+            >
+              {/* Header */}
+              <div style={s.drawerHeader}>
+                <img src="/icons/F-Kernel.png" alt="Kernel" style={s.drawerLogo} />
+                <button style={s.closeBtn} onClick={onClose}>
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+                    <path d="M18 6L6 18M6 6l12 12" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+                  </svg>
+                </button>
+              </div>
+
+              {/* User Card */}
+              <div style={s.userCard}>
+                <div style={s.userCardAvatar}>
+                  {userName?.[0]?.toUpperCase() || "?"}
+                </div>
+                <div style={s.userCardInfo}>
+                  <div style={s.userCardName}>{userName}</div>
+                  <div style={s.userCardEmail}>{localStorage.getItem("finfuture_email") || ""}</div>
+                </div>
+              </div>
+
+              <div style={s.drawerDivider} />
+
+              {/* Navigation */}
+              <nav style={s.drawerNav}>
+                {tabs.map((t, i) => (
+                  <Motion.button
+                    key={t.id}
+                    onClick={() => handleNavigate(t.id)}
+                    style={{
+                      ...s.drawerNavBtn,
+                      ...(active === t.id ? s.drawerNavBtnActive : {}),
+                    }}
+                    initial={{ opacity: 0, x: -20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: i * 0.05 + 0.1 }}
+                    whileTap={{ scale: 0.98 }}
+                  >
+                    <img src={t.icon} alt="" style={s.drawerNavIcon} />
+                    <span style={s.drawerNavText}>{t.label}</span>
+                    {active === t.id && (
+                      <Motion.div
+                        layoutId="drawer-active"
+                        style={s.drawerActiveIndicator}
+                      />
+                    )}
+                  </Motion.button>
+                ))}
+              </nav>
+
+              {/* Footer */}
+              <div style={s.drawerFooter}>
+                <button onClick={onLogout} style={s.drawerLogoutBtn}>
+                  Выйти
+                </button>
+              </div>
+            </Motion.div>
+          </>
+        )}
+      </AnimatePresence>
+    )
+  }
+
+  // Desktop sidebar
   return (
     <Motion.div
       style={{ ...s.sidebar, ...(isMobile ? s.sidebarMobile : {}) }}
@@ -73,24 +160,6 @@ export default function Sidebar({ active, onNavigate, userName, onLogout, refres
         transition={{ delay: 0.1, duration: 0.3 }}
       >
         <img src="/icons/F-Kernel.png" alt="Kernel" style={{...s.logoImg, cursor: "pointer"}} onClick={() => onNavigate("home")} />
-        {isMobile && (
-          <button
-            type="button"
-            onClick={onLogout}
-            style={s.logoutIconBtn}
-            title="Выйти"
-          >
-            ⎋
-          </button>
-        )}
-        <button
-          type="button"
-          onClick={() => setTheme(t => (t === "dark" ? "light" : "dark"))}
-          style={s.themeBtn}
-          title={theme === "dark" ? "Светлая тема" : "Тёмная тема"}
-        >
-          {theme === "dark" ? "☀️" : "🌙"}
-        </button>
       </Motion.div>
 
       <div style={{ ...s.divider, ...(isMobile ? s.dividerMobile : {}) }} />
@@ -214,36 +283,32 @@ export default function Sidebar({ active, onNavigate, userName, onLogout, refres
       <div style={{ flex: 1, minHeight: isMobile ? 0 : undefined }} />
 
       {/* User */}
-      {!isMobile && (
-        <>
-          <Motion.div
-            style={s.userBox}
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.6, duration: 0.3 }}
-          >
-            <Motion.div
-              style={s.avatar}
-              whileHover={{ scale: 1.08 }}
-              transition={{ type: "spring", stiffness: 400, damping: 16 }}
-            >
-              {userName?.[0]?.toUpperCase() || "?"}
-            </Motion.div>
-            <div style={s.userInfo}>
-              <div style={s.userName}>{userName}</div>
-              <div style={s.userEmail}>{localStorage.getItem("finfuture_email") || ""}</div>
-            </div>
-          </Motion.div>
-          <Motion.button
-            onClick={onLogout}
-            style={s.logoutBtn}
-            whileHover={{ background: "rgba(244,67,54,0.06)", color: "#f44336", borderColor: "rgba(244,67,54,0.2)" }}
-            transition={{ duration: 0.2 }}
-          >
-            Выйти
-          </Motion.button>
-        </>
-      )}
+      <Motion.div
+        style={{ ...s.userBox, ...(isMobile ? s.userBoxMobile : {}) }}
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.6, duration: 0.3 }}
+      >
+        <Motion.div
+          style={s.avatar}
+          whileHover={{ scale: 1.08 }}
+          transition={{ type: "spring", stiffness: 400, damping: 16 }}
+        >
+          {userName?.[0]?.toUpperCase() || "?"}
+        </Motion.div>
+        <div style={s.userInfo}>
+          <div style={s.userName}>{userName}</div>
+          <div style={s.userEmail}>{localStorage.getItem("finfuture_email") || ""}</div>
+        </div>
+      </Motion.div>
+      <Motion.button
+        onClick={onLogout}
+        style={{ ...s.logoutBtn, ...(isMobile ? s.logoutBtnMobile : {}) }}
+        whileHover={{ background: "rgba(244,67,54,0.06)", color: "#f44336", borderColor: "rgba(244,67,54,0.2)" }}
+        transition={{ duration: 0.2 }}
+      >
+        Выйти
+      </Motion.button>
     </Motion.div>
   )
 }
@@ -255,8 +320,8 @@ const s = {
     top: 0,
     bottom: 0,
     width: 260,
-    background: "var(--card-bg)",
-    borderRight: "1px solid var(--border-color)",
+    background: "#ffffff",
+    borderRight: "1px solid rgba(0,0,0,0.08)",
     display: "flex",
     flexDirection: "column",
     padding: "20px 16px",
@@ -270,7 +335,7 @@ const s = {
     bottom: "auto",
     left: "auto",
     borderRight: "none",
-    borderBottom: "1px solid var(--border-color)",
+    borderBottom: "1px solid rgba(0,0,0,0.08)",
     padding: "12px 12px 10px",
     zIndex: 200,
     overflowY: "visible",
@@ -286,36 +351,6 @@ const s = {
     height: 32,
     objectFit: "contain",
   },
-  themeBtn: {
-    marginLeft: "auto",
-    width: 36,
-    height: 36,
-    borderRadius: 10,
-    border: "1px solid var(--border-color)",
-    background: "rgba(0,0,0,0.04)",
-    color: "var(--text-primary)",
-    cursor: "pointer",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    fontSize: 16,
-    transition: "background-color 0.2s ease, border-color 0.2s ease, transform 0.1s ease",
-  },
-  logoutIconBtn: {
-    marginLeft: "auto",
-    width: 36,
-    height: 36,
-    borderRadius: 10,
-    border: "1px solid var(--border-color)",
-    background: "transparent",
-    color: "var(--text-dim)",
-    cursor: "pointer",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    fontSize: 16,
-    transition: "background-color 0.2s ease, color 0.2s ease",
-  },
   divider: {
     height: 1,
     background: "rgba(0,0,0,0.06)",
@@ -325,7 +360,7 @@ const s = {
     margin: "10px 0",
   },
   portfolioBox: {
-    background: "rgba(0,0,0,0.04)",
+    background: "#f6f7f8",
     borderRadius: 12,
     padding: "12px 14px",
     cursor: "pointer",
@@ -333,7 +368,7 @@ const s = {
   },
   portfolioLabel: {
     fontSize: 11,
-    color: "var(--text-dim)",
+    color: "rgba(0,0,0,0.45)",
     textTransform: "uppercase",
     letterSpacing: 1,
     marginBottom: 4,
@@ -342,7 +377,7 @@ const s = {
   portfolioValue: {
     fontSize: 20,
     fontWeight: 700,
-    color: "var(--text-primary)",
+    color: "#1a1a1a",
   },
   portfolioPnl: {
     fontSize: 13,
@@ -351,7 +386,7 @@ const s = {
   },
   portfolioFree: {
     fontSize: 11,
-    color: "var(--text-dim)",
+    color: "rgba(0,0,0,0.4)",
     marginTop: 4,
   },
   nav: {
@@ -373,7 +408,7 @@ const s = {
     border: "none",
     borderRadius: 10,
     background: "transparent",
-    color: "var(--text-dim)",
+    color: "rgba(0,0,0,0.55)",
     fontSize: 14,
     fontWeight: 500,
     cursor: "pointer",
@@ -394,7 +429,7 @@ const s = {
   },
   navBtnActive: {
     background: "rgba(255,221,45,0.15)",
-    color: "var(--text-primary)",
+    color: "#1a1a1a",
     fontWeight: 600,
   },
   navIconImg: {
@@ -412,7 +447,7 @@ const s = {
   },
   levelBox: {
     padding: "12px 14px",
-    background: "rgba(0,0,0,0.04)",
+    background: "#f6f7f8",
     borderRadius: 12,
     marginBottom: 8,
   },
@@ -426,11 +461,11 @@ const s = {
   levelName: {
     fontSize: 13,
     fontWeight: 600,
-    color: "var(--text-primary)",
+    color: "#1a1a1a",
   },
   xpBar: {
     height: 6,
-    background: "rgba(0,0,0,0.10)",
+    background: "rgba(0,0,0,0.06)",
     borderRadius: 3,
     overflow: "hidden",
     marginBottom: 4,
@@ -443,7 +478,7 @@ const s = {
   },
   xpText: {
     fontSize: 11,
-    color: "var(--text-dim)",
+    color: "rgba(0,0,0,0.4)",
   },
   streakBox: {
     display: "flex",
@@ -461,7 +496,7 @@ const s = {
   },
   streakLabel: {
     fontSize: 13,
-    color: "var(--text-dim)",
+    color: "rgba(0,0,0,0.45)",
   },
   userBox: {
     display: "flex",
@@ -492,24 +527,24 @@ const s = {
   userName: {
     fontSize: 13,
     fontWeight: 600,
-    color: "var(--text-primary)",
+    color: "#1a1a1a",
     whiteSpace: "nowrap",
     overflow: "hidden",
     textOverflow: "ellipsis",
   },
   userEmail: {
     fontSize: 11,
-    color: "var(--text-dim)",
+    color: "rgba(0,0,0,0.4)",
     whiteSpace: "nowrap",
     overflow: "hidden",
     textOverflow: "ellipsis",
   },
   logoutBtn: {
     padding: "8px 14px",
-    border: "1px solid var(--border-color)",
+    border: "1px solid rgba(0,0,0,0.08)",
     borderRadius: 8,
     background: "transparent",
-    color: "var(--text-dim)",
+    color: "rgba(0,0,0,0.45)",
     fontSize: 12,
     cursor: "pointer",
     fontFamily: "inherit",
@@ -518,5 +553,202 @@ const s = {
   },
   logoutBtnMobile: {
     marginTop: 8,
+  },
+
+  // Mobile Drawer Styles
+  backdrop: {
+    position: "fixed",
+    inset: 0,
+    background: "rgba(0,0,0,0.5)",
+    backdropFilter: "blur(4px)",
+    zIndex: 350,
+  },
+  drawer: {
+    position: "fixed",
+    left: 0,
+    top: 0,
+    bottom: 0,
+    width: "80%",
+    maxWidth: 320,
+    background: "#ffffff",
+    zIndex: 360,
+    display: "flex",
+    flexDirection: "column",
+    boxShadow: "4px 0 24px rgba(0,0,0,0.15)",
+  },
+  drawerHeader: {
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "space-between",
+    padding: "16px 16px 12px",
+    borderBottom: "1px solid rgba(0,0,0,0.08)",
+  },
+  drawerLogo: {
+    height: 28,
+    objectFit: "contain",
+  },
+  closeBtn: {
+    width: 40,
+    height: 40,
+    borderRadius: 10,
+    border: "none",
+    background: "transparent",
+    color: "rgba(0,0,0,0.45)",
+    cursor: "pointer",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    transition: "background 0.2s",
+  },
+  userCard: {
+    display: "flex",
+    alignItems: "center",
+    gap: 14,
+    padding: "16px",
+    margin: "12px 16px 0",
+    background: "#f6f7f8",
+    borderRadius: 14,
+  },
+  userCardAvatar: {
+    width: 48,
+    height: 48,
+    borderRadius: "50%",
+    background: "linear-gradient(135deg, #ffdd2d, #ffa000)",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    fontSize: 20,
+    fontWeight: 700,
+    color: "#1a1a1a",
+    flexShrink: 0,
+  },
+  userCardInfo: {
+    flex: 1,
+    minWidth: 0,
+  },
+  userCardName: {
+    fontSize: 16,
+    fontWeight: 600,
+    color: "#1a1a1a",
+    whiteSpace: "nowrap",
+    overflow: "hidden",
+    textOverflow: "ellipsis",
+  },
+  userCardLevel: {
+    fontSize: 13,
+    color: "rgba(0,0,0,0.45)",
+    marginTop: 4,
+  },
+  userCardEmail: {
+    fontSize: 12,
+    color: "rgba(0,0,0,0.45)",
+    marginTop: 2,
+    whiteSpace: "nowrap",
+    overflow: "hidden",
+    textOverflow: "ellipsis",
+  },
+  balanceCard: {
+    margin: "12px 16px",
+    padding: "14px 16px",
+    background: "linear-gradient(135deg, rgba(255,221,45,0.15), rgba(255,160,0,0.08))",
+    borderRadius: 12,
+    border: "1px solid rgba(255,221,45,0.2)",
+  },
+  balanceCardLabel: {
+    fontSize: 11,
+    color: "rgba(0,0,0,0.45)",
+    textTransform: "uppercase",
+    letterSpacing: 1,
+    marginBottom: 6,
+    fontWeight: 600,
+  },
+  balanceCardValue: {
+    fontSize: 22,
+    fontWeight: 700,
+    color: "#1a1a1a",
+  },
+  drawerDivider: {
+    height: 1,
+    background: "rgba(0,0,0,0.06)",
+    margin: "8px 16px",
+  },
+  drawerNav: {
+    display: "flex",
+    flexDirection: "column",
+    gap: 2,
+    padding: "0 12px",
+  },
+  drawerNavBtn: {
+    display: "flex",
+    alignItems: "center",
+    gap: 12,
+    padding: "12px 14px",
+    border: "none",
+    borderRadius: 10,
+    background: "transparent",
+    color: "rgba(0,0,0,0.55)",
+    fontSize: 14,
+    fontWeight: 500,
+    cursor: "pointer",
+    transition: "all 0.2s",
+    textAlign: "left",
+    width: "100%",
+    fontFamily: "inherit",
+    position: "relative",
+  },
+  drawerNavBtnActive: {
+    background: "rgba(255,221,45,0.12)",
+    color: "#1a1a1a",
+    fontWeight: 600,
+  },
+  drawerNavIcon: {
+    width: 22,
+    height: 22,
+    objectFit: "contain",
+    flexShrink: 0,
+  },
+  drawerNavText: {
+    flex: 1,
+  },
+  drawerActiveIndicator: {
+    position: "absolute",
+    left: 0,
+    top: "20%",
+    bottom: "20%",
+    width: 3,
+    background: "#ffdd2d",
+    borderRadius: "0 3px 3px 0",
+  },
+  drawerFooter: {
+    padding: "12px 16px",
+    borderTop: "1px solid rgba(0,0,0,0.08)",
+    marginTop: "auto",
+  },
+  drawerLogoutBtn: {
+    width: "100%",
+    padding: "10px 14px",
+    border: "1px solid rgba(0,0,0,0.08)",
+    borderRadius: 10,
+    background: "transparent",
+    color: "rgba(0,0,0,0.45)",
+    fontSize: 13,
+    fontWeight: 600,
+    cursor: "pointer",
+    fontFamily: "inherit",
+    transition: "all 0.2s",
+  },
+  drawerStreakBadge: {
+    display: "flex",
+    alignItems: "center",
+    gap: 6,
+    padding: "10px 14px",
+    background: "linear-gradient(135deg, rgba(255,152,0,0.12), rgba(255,87,34,0.06))",
+    borderRadius: 10,
+    border: "1px solid rgba(255,152,0,0.2)",
+  },
+  drawerStreakNum: {
+    fontSize: 16,
+    fontWeight: 700,
+    color: "#ff9800",
   },
 }
