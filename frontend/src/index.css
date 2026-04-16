@@ -103,20 +103,6 @@ body.dark {
   color-scheme: dark;
 }
 
-/* Dark-mode bridge for inline light styles used in screens */
-body.dark [style*="background: #ffffff"],
-body.dark [style*="background:#ffffff"] {
-  background: var(--card-bg) !important;
-}
-body.dark [style*="color: #1a1a1a"],
-body.dark [style*="color:#1a1a1a"] {
-  color: var(--text-primary) !important;
-}
-body.dark [style*="border: 1px solid rgba(0,0,0,0.08)"],
-body.dark [style*="border:1px solid rgba(0,0,0,0.08)"] {
-  border-color: var(--border-color) !important;
-}
-
 h1, h2, h3 {
   font-family: var(--sans);
   font-weight: 700;

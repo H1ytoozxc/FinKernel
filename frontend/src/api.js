@@ -167,6 +167,11 @@ export const loginUser = async (email, password) => {
   if (res.access_token) {
     setToken(res.access_token, res.refresh_token)
     localStorage.setItem("finfuture_email", email)
+    // Persist a stable display name for session restore
+    if (!localStorage.getItem("finfuture_name")) {
+      const fallbackName = String(email || "User").split("@")[0] || "User"
+      localStorage.setItem("finfuture_name", fallbackName)
+    }
 
     if (res.is_admin) {
       localStorage.setItem("finfuture_is_admin", "true")

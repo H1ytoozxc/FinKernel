@@ -42,22 +42,22 @@ export default function SettingsScreen() {
 
 const s = {
   page: { maxWidth: 500, margin: "0 auto" },
-  title: { fontSize: 28, fontWeight: 800, color: "#1a1a1a", marginBottom: 20 },
+  title: { fontSize: 28, fontWeight: 800, color: "var(--text-primary)", marginBottom: 20 },
   card: {
-    background: "#ffffff", borderRadius: 16, padding: "20px 24px",
-    border: "1px solid rgba(0,0,0,0.08)", marginBottom: 12,
+    background: "var(--card-bg)", borderRadius: 16, padding: "20px 24px",
+    border: "1px solid var(--border-color)", marginBottom: 12,
     boxShadow: "0 1px 3px rgba(0,0,0,0.06)",
   },
   sectionTitle: {
-    fontSize: 11, fontWeight: 700, color: "rgba(0,0,0,0.4)",
+    fontSize: 11, fontWeight: 700, color: "var(--text-dim)",
     textTransform: "uppercase", letterSpacing: 1, marginBottom: 14,
   },
   row: {
     display: "flex", alignItems: "center", justifyContent: "space-between",
     padding: "8px 0", cursor: "pointer", userSelect: "none",
   },
-  rowLabel: { fontSize: 14, fontWeight: 600, color: "#1a1a1a" },
-  rowHint: { fontSize: 12, color: "rgba(0,0,0,0.4)", marginTop: 2 },
+  rowLabel: { fontSize: 14, fontWeight: 600, color: "var(--text-primary)" },
+  rowHint: { fontSize: 12, color: "var(--text-dim)", marginTop: 2 },
   separator: {
     height: 1, background: "rgba(0,0,0,0.06)", margin: "8px 0",
   },
@@ -73,6 +73,6 @@ const s = {
     transition: "left 0.2s", boxShadow: "0 1px 3px rgba(0,0,0,0.2)",
   },
   switchDotOn: { left: 22 },
-  about: { fontSize: 13, color: "rgba(0,0,0,0.45)", marginBottom: 8, lineHeight: 1.5 },
-  version: { fontSize: 12, color: "rgba(0,0,0,0.3)" },
+  about: { fontSize: 13, color: "var(--text-dim)", marginBottom: 8, lineHeight: 1.5 },
+  version: { fontSize: 12, color: "var(--text-muted)" },
 }

@@ -70,8 +70,10 @@ export default function App() {
     const savedToken = localStorage.getItem("finfuture_token")
     const savedRefreshToken = localStorage.getItem("finfuture_refresh_token")
 
-    if (savedName && savedEmail && savedToken && savedRefreshToken) {
-      setUser(savedName)
+    if (savedEmail && savedToken && savedRefreshToken) {
+      const fallbackName = savedName || String(savedEmail).split("@")[0] || "User"
+      if (!savedName) localStorage.setItem("finfuture_name", fallbackName)
+      setUser(fallbackName)
       // Start automatic token refresh
       startTokenRefresh()
       // Check if onboarding is needed for existing user

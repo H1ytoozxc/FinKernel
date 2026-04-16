@@ -188,8 +188,8 @@ export default function AIAdvisorScreen({ onStartLesson, isMobile = false }) {
       await runReceiptText(text)
     } catch {
       pushAssistant("Не смог прочитать текст с фото. Попробуй более чёткое фото или просто вставь текст чека.")
-      setParsingReceipt(false)
     } finally {
+      setParsingReceipt(false)
       if (receiptFileRef.current) receiptFileRef.current.value = ""
     }
   }, [pushAssistant, runReceiptText])
@@ -619,20 +619,20 @@ const s = {
   pageTitle: {
     fontSize: 18,
     fontWeight: 700,
-    color: "#1a1a1a",
+    color: "var(--text-primary)",
     lineHeight: 1.2,
   },
   pageSubtitle: {
     fontSize: 12,
-    color: "rgba(0,0,0,0.4)",
+    color: "var(--text-dim)",
     marginTop: 2,
   },
   tipsToggle: {
     padding: "8px 16px",
-    border: "1px solid rgba(0,0,0,0.08)",
+    border: "1px solid var(--border-color)",
     borderRadius: 10,
-    background: "#fff",
-    color: "rgba(0,0,0,0.5)",
+    background: "var(--card-bg)",
+    color: "var(--text-dim)",
     fontSize: 13,
     fontWeight: 500,
     cursor: "pointer",
@@ -659,7 +659,7 @@ const s = {
 
   // Chat card
   chatCard: {
-    background: "#ffffff",
+    background: "var(--card-bg)",
     borderRadius: 18,
     border: "1px solid rgba(0,0,0,0.06)",
     boxShadow: "0 2px 12px rgba(0,0,0,0.04)",

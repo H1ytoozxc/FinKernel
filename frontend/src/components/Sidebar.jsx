@@ -73,6 +73,16 @@ export default function Sidebar({ active, onNavigate, userName, onLogout, refres
         transition={{ delay: 0.1, duration: 0.3 }}
       >
         <img src="/icons/F-Kernel.png" alt="Kernel" style={{...s.logoImg, cursor: "pointer"}} onClick={() => onNavigate("home")} />
+        {isMobile && (
+          <button
+            type="button"
+            onClick={onLogout}
+            style={s.logoutIconBtn}
+            title="Выйти"
+          >
+            ⎋
+          </button>
+        )}
         <button
           type="button"
           onClick={() => setTheme(t => (t === "dark" ? "light" : "dark"))}
@@ -204,32 +214,36 @@ export default function Sidebar({ active, onNavigate, userName, onLogout, refres
       <div style={{ flex: 1, minHeight: isMobile ? 0 : undefined }} />
 
       {/* User */}
-      <Motion.div
-        style={{ ...s.userBox, ...(isMobile ? s.userBoxMobile : {}) }}
-        initial={{ opacity: 0, y: 10 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.6, duration: 0.3 }}
-      >
-        <Motion.div
-          style={s.avatar}
-          whileHover={{ scale: 1.08 }}
-          transition={{ type: "spring", stiffness: 400, damping: 16 }}
-        >
-          {userName?.[0]?.toUpperCase() || "?"}
-        </Motion.div>
-        <div style={s.userInfo}>
-          <div style={s.userName}>{userName}</div>
-          <div style={s.userEmail}>{localStorage.getItem("finfuture_email") || ""}</div>
-        </div>
-      </Motion.div>
-      <Motion.button
-        onClick={onLogout}
-        style={{ ...s.logoutBtn, ...(isMobile ? s.logoutBtnMobile : {}) }}
-        whileHover={{ background: "rgba(244,67,54,0.06)", color: "#f44336", borderColor: "rgba(244,67,54,0.2)" }}
-        transition={{ duration: 0.2 }}
-      >
-        Выйти
-      </Motion.button>
+      {!isMobile && (
+        <>
+          <Motion.div
+            style={s.userBox}
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.6, duration: 0.3 }}
+          >
+            <Motion.div
+              style={s.avatar}
+              whileHover={{ scale: 1.08 }}
+              transition={{ type: "spring", stiffness: 400, damping: 16 }}
+            >
+              {userName?.[0]?.toUpperCase() || "?"}
+            </Motion.div>
+            <div style={s.userInfo}>
+              <div style={s.userName}>{userName}</div>
+              <div style={s.userEmail}>{localStorage.getItem("finfuture_email") || ""}</div>
+            </div>
+          </Motion.div>
+          <Motion.button
+            onClick={onLogout}
+            style={s.logoutBtn}
+            whileHover={{ background: "rgba(244,67,54,0.06)", color: "#f44336", borderColor: "rgba(244,67,54,0.2)" }}
+            transition={{ duration: 0.2 }}
+          >
+            Выйти
+          </Motion.button>
+        </>
+      )}
     </Motion.div>
   )
 }
@@ -286,6 +300,21 @@ const s = {
     justifyContent: "center",
     fontSize: 16,
     transition: "background-color 0.2s ease, border-color 0.2s ease, transform 0.1s ease",
+  },
+  logoutIconBtn: {
+    marginLeft: "auto",
+    width: 36,
+    height: 36,
+    borderRadius: 10,
+    border: "1px solid var(--border-color)",
+    background: "transparent",
+    color: "var(--text-dim)",
+    cursor: "pointer",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    fontSize: 16,
+    transition: "background-color 0.2s ease, color 0.2s ease",
   },
   divider: {
     height: 1,

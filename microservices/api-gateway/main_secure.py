@@ -761,6 +761,39 @@ async def get_dashboard(
             # Keep legacy behavior if AI doesn't provide a daily average.
             daily_avg = int(balance_data.get("balance", 0) / days_left)
         dashboard["forecast"] = {"days_left": days_left, "daily_avg": daily_avg}
+    else:
+        # Fallback forecast: compute from recent expenses (no AI dependency)
+        try:
+            import datetime as _dt
+
+            now = _dt.datetime.utcnow()
+            window_days = 14
+            cutoff = now - _dt.timedelta(days=window_days)
+
+            exp_sum = 0.0
+            exp_days = set()
+            for txn in transactions:
+                if txn.get("type") != "expense":
+                    continue
+                ts = txn.get("timestamp") or txn.get("date") or ""
+                if not ts:
+                    continue
+                try:
+                    d = _dt.datetime.fromisoformat(str(ts).replace("Z", "+00:00"))
+                except Exception:
+                    continue
+                if d < cutoff:
+                    continue
+                exp_sum += float(txn.get("amount") or 0)
+                exp_days.add(d.date())
+
+            if exp_sum > 0 and exp_days:
+                daily = exp_sum / max(len(exp_days), 1)
+                bal = float(balance_data.get("balance", 0) or 0)
+                days_left = int(bal / daily) if daily > 0 else 0
+                dashboard["forecast"] = {"days_left": max(days_left, 0), "daily_avg": int(daily)}
+        except Exception:
+            pass
 
     # Cache result for 30 seconds
     try:

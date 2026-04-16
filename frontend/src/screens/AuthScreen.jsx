@@ -144,28 +144,28 @@ export default function AuthScreen({ onAuth }) {
 
 const s = {
   page: {
-    background: "#f6f7f8", display: "flex", alignItems: "center", justifyContent: "center",
+    background: "var(--bg-primary)", display: "flex", alignItems: "center", justifyContent: "center",
     minHeight: "100vh", padding: 16, fontFamily: "Inter, sans-serif",
   },
   card: {
-    background: "#ffffff", borderRadius: 20, padding: "40px 32px", maxWidth: 420, width: "100%",
-    border: "1px solid rgba(0,0,0,0.08)", boxShadow: "0 2px 12px rgba(0,0,0,0.08)",
+    background: "var(--card-bg)", borderRadius: 20, padding: "40px 32px", maxWidth: 420, width: "100%",
+    border: "1px solid var(--border-color)", boxShadow: "0 2px 12px rgba(0,0,0,0.08)",
   },
   logo: {
     display: "flex", alignItems: "center", justifyContent: "center", gap: 8, marginBottom: 8,
   },
   tagline: {
-    fontSize: 13, color: "rgba(0,0,0,0.45)", textAlign: "center", marginBottom: 28,
+    fontSize: 13, color: "var(--text-dim)", textAlign: "center", marginBottom: 28,
   },
   title: {
-    fontSize: 20, fontWeight: 700, color: "#1a1a1a", marginBottom: 20, textAlign: "center",
+    fontSize: 20, fontWeight: 700, color: "var(--text-primary)", marginBottom: 20, textAlign: "center",
   },
   form: { display: "flex", flexDirection: "column", gap: 12 },
   input: {
     padding: "14px 16px", fontSize: 14, borderRadius: 12,
     border: "1px solid rgba(0,0,0,0.12)", outline: "none",
-    fontFamily: "Inter, sans-serif", background: "#f6f7f8",
-    color: "#1a1a1a",
+    fontFamily: "Inter, sans-serif", background: "rgba(0,0,0,0.04)",
+    color: "var(--text-primary)",
   },
   error: {
     padding: "10px 14px", borderRadius: 8, background: "rgba(244,67,54,0.08)",
@@ -187,13 +187,13 @@ const s = {
   },
   tbankBtn: {
     width: "100%", padding: "13px 0", fontSize: 14, fontWeight: 600,
-    borderRadius: 12, background: "#ffffff", color: "#1a1a1a",
+    borderRadius: 12, background: "var(--card-bg)", color: "var(--text-primary)",
     border: "1px solid rgba(0,0,0,0.12)", cursor: "pointer",
     fontFamily: "inherit", display: "flex", alignItems: "center",
     justifyContent: "center", gap: 8, transition: "all 0.2s",
   },
   toggle: {
-    width: "100%", padding: "10px 0", fontSize: 13, color: "rgba(0,0,0,0.45)",
+    width: "100%", padding: "10px 0", fontSize: 13, color: "var(--text-dim)",
     background: "none", border: "none", cursor: "pointer", marginTop: 12,
     fontFamily: "inherit",
   },
@@ -203,6 +203,6 @@ const s = {
   },
   feature: {
     display: "flex", flexDirection: "column", alignItems: "center", gap: 4,
-    fontSize: 11, color: "rgba(0,0,0,0.45)", textAlign: "center",
+    fontSize: 11, color: "var(--text-dim)", textAlign: "center",
   },
 }

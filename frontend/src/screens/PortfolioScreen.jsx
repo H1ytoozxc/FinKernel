@@ -52,21 +52,22 @@ function AnimatedNumber({ value, suffix = "", masked = false }) {
 
 function csvEscape(v) {
   const s = String(v ?? "")
-  if (/[",\n]/.test(s)) return `"${s.replace(/"/g, '""')}"`
+  if (/[;"\n]/.test(s)) return `"${s.replace(/"/g, '""')}"`
   return s
 }
 
 function downloadTransactionsCsv(transactions, filename = "finkernel-report.csv") {
-  const header = ["date", "type", "category", "amount", "comment"]
+  // Excel-friendly (RU): semicolon + BOM + human-readable dates
+  const header = ["Дата", "Тип", "Категория", "Сумма", "Комментарий"]
   const rows = (transactions || []).map(t => ([
-    t?.date ? new Date(t.date).toISOString() : "",
-    t?.type || "",
+    t?.date ? new Date(t.date).toLocaleString("ru-RU") : "",
+    t?.type === "income" ? "Доход" : t?.type === "expense" ? "Расход" : (t?.type || ""),
     t?.category || "",
-    (t?.amount ?? ""),
-    (t?.comment || t?.description || ""),
-  ].map(csvEscape).join(",")))
+    `${t?.type === "income" ? "+" : t?.type === "expense" ? "-" : ""}${(t?.amount ?? "").toString()}`,
+    (t?.comment || t?.description || "-"),
+  ].map(csvEscape).join(";")))
 
-  const csv = [header.join(","), ...rows].join("\n")
+  const csv = "\uFEFF" + [header.join(";"), ...rows].join("\n")
   const blob = new Blob([csv], { type: "text/csv;charset=utf-8" })
   const url = URL.createObjectURL(blob)
   const a = document.createElement("a")
@@ -409,14 +410,14 @@ const s = {
     justifyContent: "flex-end",
   },
   headerLabel: { fontSize: 11, color: "rgba(0,0,0,0.4)", letterSpacing: 2, marginBottom: 6 },
-  headerValue: { fontSize: 36, fontWeight: 800, color: "#1a1a1a", marginBottom: 4 },
+  headerValue: { fontSize: 36, fontWeight: 800, color: "var(--text-primary)", marginBottom: 4 },
   headerPnl: { fontSize: 16, fontWeight: 600 },
   exportBtn: {
     padding: "12px 16px",
     borderRadius: 10,
-    border: "1px solid rgba(0,0,0,0.08)",
+    border: "1px solid var(--border-color)",
     background: "rgba(0,0,0,0.02)",
-    color: "rgba(0,0,0,0.7)",
+    color: "var(--text-dim)",
     fontSize: 13,
     fontWeight: 700,
     cursor: "pointer",
@@ -448,7 +449,7 @@ const s = {
   historyRow: {
     display: "flex", alignItems: "center", gap: 12,
     padding: "12px 16px", borderRadius: 12,
-    background: "#ffffff",
+    background: "var(--card-bg)",
     border: "1px solid rgba(0,0,0,0.04)",
     boxShadow: "0 1px 3px rgba(0,0,0,0.06)",
   },
@@ -463,7 +464,7 @@ const s = {
     display: "flex", alignItems: "center", justifyContent: "center", zIndex: 200,
   },
   modal: {
-    background: "#ffffff", borderRadius: 20, padding: "28px 24px",
+    background: "var(--card-bg)", borderRadius: 20, padding: "28px 24px",
     width: 400, maxWidth: "90vw", border: "1px solid rgba(0,0,0,0.06)",
     boxShadow: "0 4px 24px rgba(0,0,0,0.12)",
   },
@@ -481,7 +482,7 @@ const s = {
   tradeToggleBuy: { background: "rgba(255,221,45,0.15)", color: "#ffdd2d", borderColor: "rgba(255,221,45,0.3)" },
   tradeToggleSell: { background: "rgba(255,221,45,0.15)", color: "#ffdd2d", borderColor: "rgba(255,221,45,0.3)" },
   formGroup: { marginBottom: 16 },
-  formLabel: { display: "block", fontSize: 13, fontWeight: 600, color: "#1a1a1a", marginBottom: 6 },
+  formLabel: { display: "block", fontSize: 13, fontWeight: 600, color: "var(--text-primary)", marginBottom: 6 },
   formInput: {
     width: "100%", padding: "10px 12px", borderRadius: 8,
     border: "1px solid rgba(0,0,0,0.12)", fontSize: 14,
